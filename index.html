@@ -1,0 +1,1440 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Shadow Dash — Runner Game</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@400;600;700&display=swap');
+
+  :root {
+    --neon: #00f5ff;
+    --neon2: #ff00aa;
+    --gold: #ffd700;
+    --bg: #060612;
+    --panel: rgba(10,10,30,0.92);
+    --border: rgba(0,245,255,0.25);
+    --text: #e8f4ff;
+    --danger: #ff3355;
+    --success: #00ff88;
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+
+  body {
+    background: var(--bg);
+    font-family: 'Rajdhani', sans-serif;
+    color: var(--text);
+    min-height: 100vh;
+    overflow: hidden;
+    user-select: none;
+  }
+
+  /* ── SCREENS ── */
+  .screen { position:fixed; inset:0; display:flex; align-items:center; justify-content:center; z-index:100; }
+  .screen.hidden { display:none; }
+
+  /* ── PARTICLES BG ── */
+  #particles { position:fixed; inset:0; z-index:0; pointer-events:none; }
+
+  /* ── PROFILE SCREEN ── */
+  #profileScreen {
+    background: radial-gradient(ellipse at 50% 0%, #0d1a3a 0%, var(--bg) 70%);
+    flex-direction: column;
+    gap: 0;
+  }
+  .profile-box {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 40px 50px;
+    width: min(500px, 92vw);
+    box-shadow: 0 0 60px rgba(0,245,255,0.08), inset 0 1px 0 rgba(255,255,255,0.05);
+    position: relative;
+    z-index:2;
+  }
+  .profile-box h1 {
+    font-family: 'Orbitron', monospace;
+    font-size: clamp(1.6rem, 5vw, 2.4rem);
+    font-weight: 900;
+    text-align: center;
+    background: linear-gradient(135deg, var(--neon), var(--neon2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    letter-spacing: 3px;
+    margin-bottom: 8px;
+  }
+  .profile-box .sub { text-align:center; color:#7090b0; font-size:.95rem; margin-bottom:30px; letter-spacing:1px; }
+  .form-group { margin-bottom: 20px; }
+  .form-group label { display:block; font-size:.85rem; color:#8aaccc; letter-spacing:1px; text-transform:uppercase; margin-bottom:8px; }
+  .form-group input, .form-group select {
+    width: 100%;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 16px;
+    color: var(--text);
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 1rem;
+    outline: none;
+    transition: border-color .2s, box-shadow .2s;
+  }
+  .form-group input:focus, .form-group select:focus {
+    border-color: var(--neon);
+    box-shadow: 0 0 12px rgba(0,245,255,0.15);
+  }
+  .form-group select option { background: #0d1a3a; }
+  .runner-preview {
+    display: flex; gap:10px; flex-wrap:wrap; justify-content:center; margin-top: 8px;
+  }
+  .runner-thumb {
+    width:54px; height:54px; border-radius:10px; border:2px solid transparent;
+    background: rgba(255,255,255,0.04); cursor:pointer; overflow:hidden;
+    transition: border-color .2s, transform .2s;
+    display:flex; align-items:center; justify-content:center; font-size:1.6rem;
+  }
+  .runner-thumb.selected { border-color: var(--neon); transform: scale(1.12); box-shadow: 0 0 14px rgba(0,245,255,0.4); }
+  .runner-thumb img { width:100%; height:100%; object-fit:cover; border-radius:8px; }
+
+  .profiles-list { margin-bottom:22px; }
+  .profile-item {
+    display:flex; align-items:center; justify-content:space-between;
+    background: rgba(255,255,255,0.03); border:1px solid var(--border);
+    border-radius:10px; padding:10px 14px; margin-bottom:8px; cursor:pointer;
+    transition: background .2s, border-color .2s;
+  }
+  .profile-item:hover { background: rgba(0,245,255,0.06); border-color: var(--neon); }
+  .profile-item .pi-name { font-weight:700; font-size:1rem; }
+  .profile-item .pi-score { color: var(--gold); font-size:.9rem; }
+  .profile-item .pi-del { color: var(--danger); cursor:pointer; font-size:1.1rem; padding:0 4px; }
+
+  .btn {
+    width:100%; padding:14px; border-radius:12px; border:none; cursor:pointer;
+    font-family:'Orbitron',monospace; font-size:1rem; font-weight:700;
+    letter-spacing:2px; transition: all .2s; position:relative; overflow:hidden;
+  }
+  .btn::after {
+    content:''; position:absolute; inset:0;
+    background: linear-gradient(135deg, rgba(255,255,255,.1), transparent);
+    opacity:0; transition:opacity .2s;
+  }
+  .btn:hover::after { opacity:1; }
+  .btn-primary {
+    background: linear-gradient(135deg, #0066cc, #0033aa);
+    color:#fff; box-shadow: 0 4px 20px rgba(0,100,255,0.35);
+  }
+  .btn-primary:hover { transform:translateY(-2px); box-shadow: 0 8px 30px rgba(0,100,255,0.5); }
+  .btn-neon {
+    background: linear-gradient(135deg, rgba(0,245,255,.12), rgba(0,245,255,.06));
+    color: var(--neon); border: 1px solid var(--border);
+  }
+  .btn-neon:hover { border-color:var(--neon); box-shadow:0 0 20px rgba(0,245,255,.2); }
+  .btn-sm { width:auto; padding:8px 18px; font-size:.8rem; border-radius:8px; }
+  .tab-btns { display:flex; gap:8px; margin-bottom:22px; }
+  .tab-btn {
+    flex:1; padding:10px; border-radius:8px; border:1px solid var(--border);
+    background:transparent; color:#7090b0; font-family:'Rajdhani',sans-serif;
+    font-size:.95rem; font-weight:700; cursor:pointer; transition:all .2s; letter-spacing:1px;
+  }
+  .tab-btn.active { background:rgba(0,245,255,.08); color:var(--neon); border-color:var(--neon); }
+
+  /* ── MENU SCREEN ── */
+  #menuScreen {
+    flex-direction:column; gap:20px;
+    background: radial-gradient(ellipse at 50% 20%, #0d1a3a 0%, var(--bg) 65%);
+  }
+  .menu-title {
+    font-family:'Orbitron',monospace; font-weight:900;
+    font-size: clamp(2.5rem,8vw,5rem);
+    background: linear-gradient(135deg, var(--neon) 0%, #0088ff 50%, var(--neon2) 100%);
+    -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;
+    text-align:center; letter-spacing:6px; line-height:1;
+    filter: drop-shadow(0 0 30px rgba(0,245,255,0.3));
+    animation: titlePulse 3s ease-in-out infinite;
+  }
+  @keyframes titlePulse { 0%,100%{filter:drop-shadow(0 0 20px rgba(0,245,255,.3))} 50%{filter:drop-shadow(0 0 50px rgba(0,245,255,.7))} }
+  .menu-sub { text-align:center; color:#5080a0; font-size:1rem; letter-spacing:3px; }
+  .menu-btns { display:flex; flex-direction:column; gap:12px; width:min(340px,88vw); }
+  .profile-badge {
+    display:flex; align-items:center; gap:12px;
+    background:var(--panel); border:1px solid var(--border); border-radius:14px;
+    padding:14px 20px; margin-bottom:6px;
+  }
+  .pb-avatar { font-size:2rem; }
+  .pb-info .pb-name { font-weight:700; font-size:1.1rem; color:var(--text); }
+  .pb-info .pb-score { color:var(--gold); font-size:.9rem; }
+
+  /* ── GAME SCREEN ── */
+  #gameScreen { padding:0; align-items:flex-start; }
+  #gameCanvas {
+    position:fixed; inset:0; width:100vw; height:100vh; display:block;
+    image-rendering: auto;
+  }
+
+  /* ── HUD ── */
+  #hud {
+    position:fixed; top:0; left:0; right:0; z-index:50;
+    display:flex; align-items:center; justify-content:space-between;
+    padding:10px 20px;
+    background: linear-gradient(180deg, rgba(6,6,18,.9) 0%, transparent 100%);
+  }
+  .hud-block { display:flex; flex-direction:column; align-items:center; gap:2px; }
+  .hud-label { font-size:.65rem; color:#5080a0; letter-spacing:2px; text-transform:uppercase; }
+  .hud-val { font-family:'Orbitron',monospace; font-size:1.2rem; font-weight:700; color:var(--text); }
+  .hud-val.neon { color:var(--neon); }
+  .hud-val.gold { color:var(--gold); }
+  #livesDisplay { display:flex; gap:4px; }
+  .heart { font-size:1.2rem; filter:drop-shadow(0 0 4px #ff3355); }
+
+  /* ── OVERLAY PANELS ── */
+  .overlay-panel {
+    position:fixed; inset:0; z-index:200;
+    display:flex; align-items:center; justify-content:center;
+    background: rgba(6,6,18,.85); backdrop-filter:blur(6px);
+  }
+  .overlay-panel.hidden { display:none; }
+  .panel-box {
+    background: var(--panel); border:1px solid var(--border); border-radius:24px;
+    padding:40px 50px; width:min(420px,90vw); text-align:center;
+    box-shadow: 0 0 80px rgba(0,245,255,.1);
+    animation: panelIn .35s cubic-bezier(.34,1.56,.64,1);
+  }
+  @keyframes panelIn { from{opacity:0;transform:scale(.85)} to{opacity:1;transform:scale(1)} }
+  .panel-title {
+    font-family:'Orbitron',monospace; font-size:2rem; font-weight:900; margin-bottom:6px;
+    background:linear-gradient(135deg,var(--neon),var(--neon2));
+    -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;
+  }
+  .panel-score { color:var(--gold); font-family:'Orbitron',monospace; font-size:1.5rem; margin:12px 0; }
+  .panel-stats { color:#7090b0; font-size:.95rem; margin-bottom:24px; line-height:1.8; }
+  .panel-btns { display:flex; flex-direction:column; gap:10px; }
+
+  /* ── POWER-UP BAR ── */
+  #powerBar {
+    position:fixed; bottom:20px; left:50%; transform:translateX(-50%);
+    display:flex; gap:10px; z-index:50;
+  }
+  .power-icon {
+    width:42px; height:42px; border-radius:10px;
+    border:1px solid var(--border); background:rgba(10,10,30,.8);
+    display:flex; align-items:center; justify-content:center;
+    font-size:1.2rem; position:relative;
+  }
+  .power-icon.active { border-color:var(--gold); box-shadow:0 0 12px rgba(255,215,0,.5); }
+  .power-cd {
+    position:absolute; inset:0; border-radius:9px;
+    background:rgba(255,215,0,.15); transition:clip-path .1s;
+  }
+
+  /* ── COMBO DISPLAY ── */
+  #comboDisplay {
+    position:fixed; top:80px; right:20px; z-index:50;
+    font-family:'Orbitron',monospace; font-size:1.4rem; font-weight:900;
+    color:var(--gold); text-align:right;
+    filter:drop-shadow(0 0 10px rgba(255,215,0,.6));
+    transition: opacity .3s;
+  }
+
+  /* ── LEADERBOARD ── */
+  #lbPanel .lb-row {
+    display:flex; justify-content:space-between; align-items:center;
+    padding:10px 16px; border-radius:10px; margin-bottom:6px;
+    background:rgba(255,255,255,.03); border:1px solid var(--border);
+  }
+  #lbPanel .lb-row.me { background:rgba(0,245,255,.06); border-color:var(--neon); }
+  .lbr-rank { font-family:'Orbitron',monospace; color:#5080a0; width:28px; }
+  .lbr-name { flex:1; font-weight:700; }
+  .lbr-score { color:var(--gold); font-family:'Orbitron',monospace; }
+
+  /* ── SETTINGS ── */
+  .toggle-row { display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:1px solid var(--border); }
+  .toggle-label { font-size:1rem; }
+  .toggle {
+    width:48px; height:26px; border-radius:13px; border:1px solid var(--border);
+    background:rgba(255,255,255,.05); position:relative; cursor:pointer; transition:background .2s;
+  }
+  .toggle.on { background:rgba(0,245,255,.2); border-color:var(--neon); }
+  .toggle::after {
+    content:''; position:absolute; width:20px; height:20px; border-radius:50%;
+    background:#5080a0; top:2px; left:2px; transition:left .2s, background .2s;
+  }
+  .toggle.on::after { left:24px; background:var(--neon); }
+
+  /* ── NOTIFICATION ── */
+  #notification {
+    position:fixed; top:70px; left:50%; transform:translateX(-50%);
+    background:var(--panel); border:1px solid var(--neon); border-radius:12px;
+    padding:10px 22px; font-weight:700; color:var(--neon); z-index:300;
+    font-size:.95rem; letter-spacing:1px; white-space:nowrap;
+    transition:opacity .3s, transform .3s;
+    pointer-events:none;
+  }
+  #notification.hidden { opacity:0; transform:translateX(-50%) translateY(-10px); }
+
+  /* ── SCROLLBAR ── */
+  ::-webkit-scrollbar { width:4px; }
+  ::-webkit-scrollbar-track { background:transparent; }
+  ::-webkit-scrollbar-thumb { background:var(--border); border-radius:2px; }
+</style>
+</head>
+<body>
+
+<!-- PARTICLE BG -->
+<canvas id="particles"></canvas>
+
+<!-- NOTIFICATION -->
+<div id="notification" class="hidden"></div>
+
+<!-- ═══════════════ PROFILE SCREEN ═══════════════ -->
+<div id="profileScreen" class="screen">
+  <div class="profile-box">
+    <h1>SHADOW DASH</h1>
+    <p class="sub">ELITE RUNNER</p>
+
+    <div class="tab-btns">
+      <button class="tab-btn active" onclick="showTab('create')">NEW PROFILE</button>
+      <button class="tab-btn" onclick="showTab('load')">LOAD PROFILE</button>
+    </div>
+
+    <!-- Create Tab -->
+    <div id="tabCreate">
+      <div class="form-group">
+        <label>Your Name</label>
+        <input id="pName" type="text" placeholder="Enter codename..." maxlength="16">
+      </div>
+      <div class="form-group">
+        <label>Choose Runner</label>
+        <div class="runner-preview" id="runnerPicker"></div>
+      </div>
+      <div class="form-group">
+        <label>Choose Background</label>
+        <select id="bgPicker">
+          <option value="0">Background 1</option>
+          <option value="1">Background 2</option>
+          <option value="2">Background 3</option>
+          <option value="3">Background 4</option>
+          <option value="4">Background 5</option>
+        </select>
+      </div>
+      <button class="btn btn-primary" onclick="createProfile()">CREATE &amp; PLAY →</button>
+    </div>
+
+    <!-- Load Tab -->
+    <div id="tabLoad" style="display:none">
+      <div class="profiles-list" id="profilesList"></div>
+      <div style="display:flex;gap:10px;margin-top:10px;">
+        <button class="btn btn-neon btn-sm" onclick="exportBackup()">📤 Export Backup</button>
+        <button class="btn btn-neon btn-sm" onclick="document.getElementById('importFile').click()">📥 Import Backup</button>
+        <input type="file" id="importFile" accept=".json" style="display:none" onchange="importBackup(this)">
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ MENU SCREEN ═══════════════ -->
+<div id="menuScreen" class="screen hidden">
+  <div class="menu-title">SHADOW<br>DASH</div>
+  <div class="menu-sub">INFINITE RUNNER</div>
+  <div class="profile-badge" id="profileBadge">
+    <div class="pb-avatar" id="pbAvatar">🏃</div>
+    <div class="pb-info">
+      <div class="pb-name" id="pbName">Player</div>
+      <div class="pb-score">Best: <span id="pbBest">0</span></div>
+    </div>
+  </div>
+  <div class="menu-btns">
+    <button class="btn btn-primary" onclick="startGame()">▶ PLAY GAME</button>
+    <button class="btn btn-neon" onclick="showLeaderboard()">🏆 LEADERBOARD</button>
+    <button class="btn btn-neon" onclick="showSettings()">⚙ SETTINGS</button>
+    <button class="btn btn-neon" onclick="switchProfile()">👤 CHANGE PROFILE</button>
+  </div>
+</div>
+
+<!-- ═══════════════ GAME SCREEN ═══════════════ -->
+<div id="gameScreen" class="screen hidden">
+  <canvas id="gameCanvas"></canvas>
+  <div id="hud">
+    <div class="hud-block">
+      <span class="hud-label">SCORE</span>
+      <span class="hud-val neon" id="hudScore">0</span>
+    </div>
+    <div class="hud-block">
+      <span class="hud-label">BEST</span>
+      <span class="hud-val gold" id="hudBest">0</span>
+    </div>
+    <div class="hud-block">
+      <span class="hud-label">LIVES</span>
+      <div id="livesDisplay"></div>
+    </div>
+    <div class="hud-block">
+      <span class="hud-label">LEVEL</span>
+      <span class="hud-val" id="hudLevel">1</span>
+    </div>
+  </div>
+  <div id="comboDisplay"></div>
+  <div id="powerBar">
+    <div class="power-icon" id="pi0" title="Shield"><span>🛡️</span><div class="power-cd"></div></div>
+    <div class="power-icon" id="pi1" title="Speed Boost"><span>⚡</span><div class="power-cd"></div></div>
+    <div class="power-icon" id="pi2" title="Magnet"><span>🧲</span><div class="power-cd"></div></div>
+  </div>
+</div>
+
+<!-- ═══════════════ PAUSE PANEL ═══════════════ -->
+<div id="pausePanel" class="overlay-panel hidden">
+  <div class="panel-box">
+    <div class="panel-title">PAUSED</div>
+    <p class="panel-stats">Score: <span id="pauseScore">0</span></p>
+    <div class="panel-btns">
+      <button class="btn btn-primary" onclick="resumeGame()">▶ RESUME</button>
+      <button class="btn btn-neon" onclick="restartGame()">↺ RESTART</button>
+      <button class="btn btn-neon" onclick="quitToMenu()">⌂ MENU</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ GAME OVER PANEL ═══════════════ -->
+<div id="gameOverPanel" class="overlay-panel hidden">
+  <div class="panel-box">
+    <div class="panel-title" id="goTitle">GAME OVER</div>
+    <div class="panel-score" id="goScore">0</div>
+    <p class="panel-stats" id="goStats"></p>
+    <div class="panel-btns">
+      <button class="btn btn-primary" onclick="restartGame()">↺ PLAY AGAIN</button>
+      <button class="btn btn-neon" onclick="quitToMenu()">⌂ MENU</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ LEADERBOARD ═══════════════ -->
+<div id="lbPanel" class="overlay-panel hidden">
+  <div class="panel-box" style="width:min(480px,92vw)">
+    <div class="panel-title">LEADERBOARD</div>
+    <div id="lbRows" style="max-height:320px;overflow-y:auto;margin:20px 0;"></div>
+    <button class="btn btn-neon" onclick="closeLb()">← BACK</button>
+  </div>
+</div>
+
+<!-- ═══════════════ SETTINGS ═══════════════ -->
+<div id="settingsPanel" class="overlay-panel hidden">
+  <div class="panel-box">
+    <div class="panel-title">SETTINGS</div>
+    <div style="margin:20px 0;">
+      <div class="toggle-row"><span class="toggle-label">🔊 Sound</span><div class="toggle on" id="tSound" onclick="toggleSetting('sound')"></div></div>
+      <div class="toggle-row"><span class="toggle-label">🎵 Music</span><div class="toggle on" id="tMusic" onclick="toggleSetting('music')"></div></div>
+      <div class="toggle-row"><span class="toggle-label">✨ Particles</span><div class="toggle on" id="tParticles" onclick="toggleSetting('particles')"></div></div>
+      <div class="toggle-row"><span class="toggle-label">📳 Vibration</span><div class="toggle on" id="tVibrate" onclick="toggleSetting('vibrate')"></div></div>
+    </div>
+    <button class="btn btn-neon" onclick="closeSettings()">← BACK</button>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════
+//  ASSET CONFIG — update paths to match your folder
+// ═══════════════════════════════════════════════
+const ASSETS = {
+  backgrounds: [
+    'assets/backgrounds/bg1.png','assets/backgrounds/bg2.png',
+    'assets/backgrounds/bg3.png','assets/backgrounds/bg4.png','assets/backgrounds/bg5.png'
+  ],
+  runners: [
+    'assets/runners/runner1.png','assets/runners/runner2.png',
+    'assets/runners/runner3.png','assets/runners/runner4.png','assets/runners/runner5.png'
+  ],
+  obstacles: [
+    'assets/obstacles/obs1.png','assets/obstacles/obs2.png','assets/obstacles/obs3.png',
+    'assets/obstacles/obs4.png','assets/obstacles/obs5.png'
+  ],
+  // Emoji fallbacks (shown if images don't load)
+  runnerEmoji: ['🏃','🧑‍🚀','🦸','🧟','🦹'],
+  bgColors: ['#1a0533','#001a33','#0a1a00','#330a00','#001a1a'],
+  obstacleEmoji: ['🪨','🌵','⚡','🔥','💎']
+};
+
+// ══ SETTINGS ══
+let settings = JSON.parse(localStorage.getItem('sd_settings')||'{}');
+settings = Object.assign({sound:true,music:true,particles:true,vibrate:true}, settings);
+function saveSettings(){ localStorage.setItem('sd_settings', JSON.stringify(settings)); }
+
+// ══ PROFILES ══
+let profiles = JSON.parse(localStorage.getItem('sd_profiles')||'[]');
+let currentProfile = null;
+function saveProfiles(){ localStorage.setItem('sd_profiles', JSON.stringify(profiles)); }
+
+function createProfile(){
+  const name = document.getElementById('pName').value.trim();
+  if(!name){ notify('Enter a name first!'); return; }
+  const runner = selectedRunner;
+  const bg = +document.getElementById('bgPicker').value;
+  const profile = {
+    id: Date.now(), name, runner, bg,
+    best: 0, totalScore: 0, gamesPlayed: 0,
+    created: new Date().toISOString()
+  };
+  profiles.push(profile);
+  saveProfiles();
+  loadProfile(profile);
+}
+
+function loadProfile(p){
+  currentProfile = p;
+  showMenu();
+}
+
+function deleteProfile(id, e){
+  e.stopPropagation();
+  if(!confirm('Delete this profile?')) return;
+  profiles = profiles.filter(p=>p.id!==id);
+  saveProfiles();
+  renderProfilesList();
+}
+
+function renderProfilesList(){
+  const el = document.getElementById('profilesList');
+  if(!profiles.length){ el.innerHTML='<p style="color:#5080a0;text-align:center;">No profiles yet</p>'; return; }
+  el.innerHTML = profiles.map(p=>`
+    <div class="profile-item" onclick="loadProfile(${JSON.stringify(p).replace(/"/g,'&quot;')})">
+      <span style="font-size:1.4rem">${ASSETS.runnerEmoji[p.runner]||'🏃'}</span>
+      <div style="flex:1;margin-left:10px">
+        <div class="pi-name">${p.name}</div>
+        <div class="pi-score">Best: ${p.best.toLocaleString()} | Games: ${p.gamesPlayed}</div>
+      </div>
+      <span class="pi-del" onclick="deleteProfile(${p.id},event)">🗑</span>
+    </div>
+  `).join('');
+}
+
+// ══ TABS ══
+function showTab(t){
+  document.getElementById('tabCreate').style.display = t==='create'?'block':'none';
+  document.getElementById('tabLoad').style.display = t==='load'?'block':'none';
+  document.querySelectorAll('.tab-btn').forEach((b,i)=>b.classList.toggle('active', (i===0&&t==='create')||(i===1&&t==='load')));
+  if(t==='load') renderProfilesList();
+}
+
+// ══ RUNNER PICKER ══
+let selectedRunner = 0;
+function buildRunnerPicker(){
+  const el = document.getElementById('runnerPicker');
+  el.innerHTML = ASSETS.runners.map((src,i)=>{
+    const img = new Image(); img.src = src;
+    return `<div class="runner-thumb${i===0?' selected':''}" onclick="selectRunner(${i})" id="rt${i}">
+      <img src="${src}" onerror="this.style.display='none';this.parentNode.innerHTML='${ASSETS.runnerEmoji[i]}'">
+    </div>`;
+  }).join('');
+}
+function selectRunner(i){
+  document.querySelectorAll('.runner-thumb').forEach(t=>t.classList.remove('selected'));
+  document.getElementById('rt'+i).classList.add('selected');
+  selectedRunner = i;
+}
+buildRunnerPicker();
+
+// ══ MENU ══
+function showMenu(){
+  hideAll();
+  document.getElementById('menuScreen').classList.remove('hidden');
+  document.getElementById('pbName').textContent = currentProfile.name;
+  document.getElementById('pbBest').textContent = currentProfile.best.toLocaleString();
+  document.getElementById('pbAvatar').textContent = ASSETS.runnerEmoji[currentProfile.runner]||'🏃';
+  startParticles();
+  if(settings.music) bgMusic.start();
+}
+function switchProfile(){
+  bgMusic.stop();
+  hideAll();
+  document.getElementById('profileScreen').classList.remove('hidden');
+  showTab('load');
+}
+
+// ══ HIDE ALL ══
+function hideAll(){
+  document.querySelectorAll('.screen,.overlay-panel').forEach(el=>el.classList.add('hidden'));
+}
+
+// ══ LEADERBOARD ══
+function showLeaderboard(){
+  const rows = [...profiles].sort((a,b)=>b.best-a.best).slice(0,10);
+  document.getElementById('lbRows').innerHTML = rows.length?rows.map((p,i)=>`
+    <div class="lb-row${p.id===currentProfile?.id?' me':''}">
+      <span class="lbr-rank">#${i+1}</span>
+      <span class="lbr-name">${ASSETS.runnerEmoji[p.runner]} ${p.name}</span>
+      <span class="lbr-score">${p.best.toLocaleString()}</span>
+    </div>
+  `).join(''):'<p style="color:#5080a0;text-align:center">No records yet</p>';
+  document.getElementById('lbPanel').classList.remove('hidden');
+}
+function closeLb(){ document.getElementById('lbPanel').classList.add('hidden'); }
+
+// ══ SETTINGS ══
+function showSettings(){
+  ['Sound','Music','Particles','Vibrate'].forEach(k=>{
+    document.getElementById('t'+k).classList.toggle('on', settings[k.toLowerCase()]);
+  });
+  document.getElementById('settingsPanel').classList.remove('hidden');
+}
+function toggleSetting(k){
+  settings[k] = !settings[k];
+  document.getElementById('t'+k[0].toUpperCase()+k.slice(1)).classList.toggle('on',settings[k]);
+  saveSettings();
+  if(k==='music'){ if(settings.music) bgMusic.start(); else bgMusic.stop(); }
+}
+function closeSettings(){ document.getElementById('settingsPanel').classList.add('hidden'); }
+
+// ══ EXPORT/IMPORT BACKUP ══
+function exportBackup(){
+  const data = { profiles, version:'1.0', date: new Date().toISOString() };
+  const blob = new Blob([JSON.stringify(data,null,2)], {type:'application/json'});
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+  a.download = 'shadow_dash_backup.json'; a.click();
+  notify('Backup exported! ✅');
+}
+function importBackup(input){
+  const file = input.files[0]; if(!file) return;
+  const r = new FileReader();
+  r.onload = e => {
+    try {
+      const data = JSON.parse(e.target.result);
+      if(data.profiles && Array.isArray(data.profiles)){
+        profiles = data.profiles; saveProfiles(); renderProfilesList();
+        notify(`Imported ${profiles.length} profiles! ✅`);
+      }
+    } catch{ notify('Invalid backup file!'); }
+  };
+  r.readAsText(file);
+  input.value='';
+}
+
+// ══ NOTIFICATION ══
+let notifTimer;
+function notify(msg, dur=2500){
+  const el = document.getElementById('notification');
+  el.textContent = msg; el.classList.remove('hidden');
+  clearTimeout(notifTimer);
+  notifTimer = setTimeout(()=>el.classList.add('hidden'), dur);
+}
+
+// ══════════════════════════════════════════════
+//  WEB AUDIO ENGINE
+// ══════════════════════════════════════════════
+const AC = new (window.AudioContext||window.webkitAudioContext)();
+
+function playTone(freq, type='square', dur=0.08, vol=0.15, delay=0){
+  if(!settings.sound) return;
+  const osc = AC.createOscillator(), g = AC.createGain();
+  osc.connect(g); g.connect(AC.destination);
+  osc.type = type; osc.frequency.value = freq;
+  g.gain.setValueAtTime(0,AC.currentTime+delay);
+  g.gain.linearRampToValueAtTime(vol,AC.currentTime+delay+0.01);
+  g.gain.exponentialRampToValueAtTime(0.001,AC.currentTime+delay+dur);
+  osc.start(AC.currentTime+delay); osc.stop(AC.currentTime+delay+dur+0.01);
+}
+
+const SFX = {
+  jump(){ playTone(440,'sine',.15,.2); playTone(660,'sine',.1,.15,.05); },
+  coin(){ [880,1100,1320].forEach((f,i)=>playTone(f,'sine',.08,.2,i*.04)); },
+  hit(){ playTone(200,'sawtooth',.3,.3); playTone(100,'sawtooth',.2,.25,.05); },
+  powerup(){ [440,550,660,880].forEach((f,i)=>playTone(f,'sine',.12,.2,i*.06)); },
+  die(){ [300,250,200,150].forEach((f,i)=>playTone(f,'sawtooth',.25,.3,i*.08)); },
+  newRecord(){ [880,1100,1320,1760].forEach((f,i)=>playTone(f,'sine',.2,.25,i*.1)); }
+};
+
+// BG Music
+const bgMusic = (() => {
+  let interval=null, beat=0;
+  const notes=[130,146,164,174];
+  return {
+    start(){
+      if(!settings.music||interval) return;
+      beat=0;
+      interval = setInterval(()=>{
+        const n=notes[beat%notes.length];
+        playTone(n,'sawtooth',.18,.06); playTone(n*2,'square',.12,.04,.09);
+        beat++;
+      },220);
+    },
+    stop(){ clearInterval(interval); interval=null; }
+  };
+})();
+
+// ══════════════════════════════════════════════
+//  PARTICLE SYSTEM
+// ══════════════════════════════════════════════
+const pCanvas = document.getElementById('particles');
+const pCtx = pCanvas.getContext('2d');
+let particles = [];
+
+function startParticles(){
+  pCanvas.width = innerWidth; pCanvas.height = innerHeight;
+  particles = Array.from({length:60},()=>createParticle());
+  animParticles();
+}
+function createParticle(){
+  return { x:Math.random()*innerWidth, y:Math.random()*innerHeight,
+    vx:(Math.random()-.5)*.4, vy:(Math.random()-.5)*.4,
+    r:Math.random()*2+.5, alpha:Math.random()*.5+.1,
+    c: Math.random()<.5?'0,245,255':'255,0,170' };
+}
+let pAnimId;
+function animParticles(){
+  if(!settings.particles){ pCtx.clearRect(0,0,pCanvas.width,pCanvas.height); return; }
+  pCtx.clearRect(0,0,pCanvas.width,pCanvas.height);
+  particles.forEach(p=>{
+    p.x+=p.vx; p.y+=p.vy;
+    if(p.x<0) p.x=innerWidth; if(p.x>innerWidth) p.x=0;
+    if(p.y<0) p.y=innerHeight; if(p.y>innerHeight) p.y=0;
+    pCtx.beginPath(); pCtx.arc(p.x,p.y,p.r,0,Math.PI*2);
+    pCtx.fillStyle=`rgba(${p.c},${p.alpha})`; pCtx.fill();
+  });
+  pAnimId = requestAnimationFrame(animParticles);
+}
+
+// ══════════════════════════════════════════════
+//  GAME ENGINE
+// ══════════════════════════════════════════════
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+
+let G = {}; // game state
+let animId, paused=false, gameRunning=false;
+
+// Loaded images cache
+const imgCache = {};
+function loadImg(src){
+  if(imgCache[src]) return imgCache[src];
+  const img = new Image(); img.src = src;
+  imgCache[src] = img; return img;
+}
+
+// Preload all assets
+function preloadAssets(){
+  [...ASSETS.backgrounds,...ASSETS.runners,...ASSETS.obstacles].forEach(loadImg);
+}
+preloadAssets();
+
+function initGame(){
+  canvas.width = innerWidth; canvas.height = innerHeight;
+  const W=canvas.width, H=canvas.height;
+  const ground = H*0.82;
+
+  G = {
+    W, H, ground,
+    score:0, coins:0, combo:0, comboTimer:0,
+    lives:3, level:1, levelTimer:0,
+    speed: 5, baseSpeed:5,
+    bgX:0, bgX2:W,
+    // Runner
+    runner:{
+      x: W*0.12, y: ground-90, w:70, h:90,
+      vy:0, jumping:false, doubleJump:false,
+      grounded:true, frame:0, frameTimer:0,
+      shield:false, speedBoost:false, magnet:false,
+      invincible:0, // frames of invincibility after hit
+    },
+    obstacles:[],
+    coinItems:[],
+    particles:[],
+    obsCooldown:0,
+    coinCooldown:60,
+    powerups:[],
+    pwCooldown:200,
+    // Power cooldowns
+    shieldCD:0, boostCD:0, magnetCD:0,
+    shieldActive:0, boostActive:0, magnetActive:0,
+    newRecord:false,
+  };
+  updateLivesHUD();
+}
+
+function startGame(){
+  AC.resume();
+  bgMusic.stop();
+  hideAll();
+  document.getElementById('gameScreen').classList.remove('hidden');
+  cancelAnimationFrame(animId);
+  cancelAnimationFrame(pAnimId);
+  pCtx.clearRect(0,0,pCanvas.width,pCanvas.height);
+  paused=false; gameRunning=true;
+  initGame();
+  updateHUD();
+  gameLoop();
+}
+function restartGame(){ startGame(); }
+function resumeGame(){
+  document.getElementById('pausePanel').classList.add('hidden');
+  paused=false; gameLoop();
+}
+function quitToMenu(){
+  cancelAnimationFrame(animId);
+  gameRunning=false; paused=false;
+  document.getElementById('gameOverPanel').classList.add('hidden');
+  document.getElementById('pausePanel').classList.add('hidden');
+  showMenu();
+}
+
+// ── GAME LOOP ──
+function gameLoop(){
+  if(!gameRunning||paused) return;
+  update();
+  draw();
+  animId = requestAnimationFrame(gameLoop);
+}
+
+function update(){
+  const g=G, r=g.runner;
+  const W=g.W, H=g.H;
+  const ground=g.ground;
+
+  // Score
+  g.score += Math.floor(g.speed*0.3);
+  g.levelTimer++;
+  if(g.levelTimer>600){
+    g.levelTimer=0; g.level++;
+    g.speed = g.baseSpeed + g.level*0.6;
+    if(g.level%3===0) spawnSpecialParticle(W/2,H/2,'LEVEL UP!');
+  }
+
+  // Speed boost
+  if(g.boostActive>0){ g.boostActive--; }
+  const spd = g.boostActive>0 ? g.speed*1.7 : g.speed;
+
+  // Background scroll
+  g.bgX -= spd*0.4;
+  g.bgX2 -= spd*0.4;
+  if(g.bgX + W < 0) g.bgX = g.bgX2 + W;
+  if(g.bgX2 + W < 0) g.bgX2 = g.bgX + W;
+
+  // Runner physics
+  if(!r.grounded){ r.vy += 0.7; r.y += r.vy; }
+  if(r.y >= ground - r.h){
+    r.y = ground - r.h; r.vy=0; r.grounded=true;
+    r.jumping=false; r.doubleJump=false;
+  }
+
+  // Runner animation
+  r.frameTimer++;
+  if(r.frameTimer>6){ r.frame=(r.frame+1)%6; r.frameTimer=0; }
+
+  // Invincibility cooldown
+  if(r.invincible>0) r.invincible--;
+
+  // Power cooldowns
+  if(g.shieldActive>0) g.shieldActive--;
+  if(g.magnetActive>0) g.magnetActive--;
+  if(g.shieldCD>0) g.shieldCD--;
+  if(g.boostCD>0) g.boostCD--;
+  if(g.magnetCD>0) g.magnetCD--;
+
+  // Combo timer
+  if(g.comboTimer>0){ g.comboTimer--; if(!g.comboTimer) g.combo=0; }
+
+  // Spawn obstacles
+  g.obsCooldown--;
+  if(g.obsCooldown<=0){
+    const obsType = Math.floor(Math.random()*5);
+    const h = 60+Math.random()*60;
+    const tall = Math.random()<0.3;
+    g.obstacles.push({
+      x:W+40, y:ground-(tall?120:h), w:50, h:tall?120:h,
+      type:obsType, frame:0, frameTimer:0,
+      img: loadImg(ASSETS.obstacles[obsType])
+    });
+    g.obsCooldown = 80 + Math.floor(Math.random()*80) - g.level*3;
+    g.obsCooldown = Math.max(35, g.obsCooldown);
+  }
+
+  // Move & check obstacles
+  g.obstacles = g.obstacles.filter(o=>{
+    o.x -= spd;
+    o.frameTimer++; if(o.frameTimer>8){o.frame=(o.frame+1)%4;o.frameTimer=0;}
+    if(o.x+o.w<0) return false;
+    // Collision
+    if(r.invincible<=0 && !g.shieldActive && rectsOverlap(r,o,12)){
+      hit();
+    } else if(g.shieldActive && rectsOverlap(r,o,12)){
+      g.shieldActive=0; SFX.powerup();
+      spawnParticlesBurst(r.x,r.y,'shield');
+      o.x=-999; return false;
+    }
+    return true;
+  });
+
+  // Spawn coins
+  g.coinCooldown--;
+  if(g.coinCooldown<=0){
+    g.coinItems.push({ x:W+20, y:ground-100-Math.random()*120, r:14, collected:false, frame:0 });
+    g.coinCooldown = 50+Math.floor(Math.random()*60);
+  }
+  g.coinItems = g.coinItems.filter(c=>{
+    c.x -= spd*0.9;
+    c.frame++;
+    if(c.x+20<0) return false;
+    // Magnet
+    if(g.magnetActive>0){
+      const dx=r.x-c.x, dy=(r.y+r.h/2)-(c.y);
+      const dist=Math.sqrt(dx*dx+dy*dy);
+      if(dist<200){ c.x+=dx*.08; c.y+=dy*.08; }
+    }
+    const cr={x:c.x-c.r,y:c.y-c.r,w:c.r*2,h:c.r*2};
+    if(rectsOverlap(r,cr,5)){ collectCoin(c.x,c.y); return false; }
+    return true;
+  });
+
+  // Spawn power-up items
+  g.pwCooldown--;
+  if(g.pwCooldown<=0){
+    g.powerups.push({ x:W+20, y:ground-130-Math.random()*80, type:Math.floor(Math.random()*3) });
+    g.pwCooldown = 300+Math.floor(Math.random()*400);
+  }
+  g.powerups = g.powerups.filter(pw=>{
+    pw.x -= spd;
+    if(pw.x+30<0) return false;
+    const pr={x:pw.x-16,y:pw.y-16,w:32,h:32};
+    if(rectsOverlap(r,pr,6)){ activatePower(pw.type); return false; }
+    return true;
+  });
+
+  // Game particles
+  g.particles = g.particles.filter(p=>{
+    p.x+=p.vx; p.y+=p.vy; p.vy+=p.gravity||0;
+    p.life--; p.alpha=p.life/p.maxLife;
+    return p.life>0;
+  });
+
+  updateHUD();
+}
+
+function hit(){
+  const g=G;
+  g.lives--;
+  SFX.hit();
+  if(settings.vibrate && navigator.vibrate) navigator.vibrate([100,50,100]);
+  g.runner.invincible = 80;
+  g.combo=0; g.comboTimer=0;
+  updateLivesHUD();
+  spawnParticlesBurst(g.runner.x, g.runner.y, 'hit');
+  if(g.lives<=0){ gameOver(); }
+}
+
+function collectCoin(x,y){
+  const g=G;
+  g.coins++;
+  g.combo++;
+  g.comboTimer = 90;
+  const pts = 10*(g.boostActive>0?2:1)*(g.combo>4?2:1);
+  g.score += pts;
+  SFX.coin();
+  spawnFloatText('+'+pts, x, y, g.combo>4?'#ffd700':'#00f5ff');
+  spawnParticlesBurst(x,y,'coin');
+}
+
+function activatePower(type){
+  const g=G;
+  SFX.powerup();
+  if(type===0){ g.shieldActive=300; }
+  else if(type===1){ g.boostActive=180; }
+  else if(type===2){ g.magnetActive=300; }
+  const labels=['SHIELD!','SPEED!','MAGNET!'];
+  spawnFloatText(labels[type],g.runner.x,g.runner.y-60,'#ffd700');
+}
+
+function rectsOverlap(a,b,shrink=0){
+  return a.x+shrink < b.x+b.w-shrink &&
+         a.x+a.w-shrink > b.x+shrink &&
+         a.y+shrink < b.y+b.h-shrink &&
+         a.y+a.h-shrink > b.y+shrink;
+}
+
+// ── DRAW ──
+function draw(){
+  const g=G, r=g.runner;
+  const W=g.W, H=g.H;
+  ctx.clearRect(0,0,W,H);
+
+  // Background
+  const bgImg = loadImg(ASSETS.backgrounds[currentProfile.bg]);
+  if(bgImg.complete && bgImg.naturalWidth){
+    ctx.drawImage(bgImg, g.bgX, 0, W, H);
+    ctx.drawImage(bgImg, g.bgX2, 0, W, H);
+  } else {
+    const grd=ctx.createLinearGradient(0,0,0,H);
+    grd.addColorStop(0, ASSETS.bgColors[currentProfile.bg]);
+    grd.addColorStop(1,'#000510');
+    ctx.fillStyle=grd; ctx.fillRect(0,0,W,H);
+  }
+
+  // Ground line
+  ctx.fillStyle='rgba(0,0,0,0.4)';
+  ctx.fillRect(0,g.ground,W,H-g.ground);
+  ctx.fillStyle='rgba(0,245,255,0.3)';
+  ctx.fillRect(0,g.ground,W,2);
+
+  // Ground glow
+  const glg = ctx.createLinearGradient(0,g.ground,0,g.ground+30);
+  glg.addColorStop(0,'rgba(0,245,255,0.1)');
+  glg.addColorStop(1,'transparent');
+  ctx.fillStyle=glg; ctx.fillRect(0,g.ground,W,30);
+
+  // Obstacles
+  g.obstacles.forEach(o=>{
+    if(o.img.complete&&o.img.naturalWidth){
+      ctx.drawImage(o.img,o.x,o.y,o.w,o.h);
+    } else {
+      ctx.fillStyle='#ff3355';
+      ctx.fillRect(o.x,o.y,o.w,o.h);
+      ctx.font='bold '+Math.min(o.w,o.h)*.7+'px sans-serif';
+      ctx.textAlign='center';
+      ctx.fillText(ASSETS.obstacleEmoji[o.type],o.x+o.w/2,o.y+o.h*.7);
+    }
+    // Shadow
+    ctx.save(); ctx.globalAlpha=0.3;
+    ctx.fillStyle='rgba(0,0,0,0.5)';
+    ctx.beginPath(); ctx.ellipse(o.x+o.w/2,g.ground+4,o.w*.4,6,0,0,Math.PI*2); ctx.fill();
+    ctx.restore();
+  });
+
+  // Coins
+  g.coinItems.forEach(c=>{
+    const t=c.frame*.1;
+    const yy=c.y+Math.sin(t)*6;
+    ctx.save();
+    ctx.shadowColor='#ffd700'; ctx.shadowBlur=12;
+    ctx.beginPath(); ctx.arc(c.x,yy,c.r,0,Math.PI*2);
+    ctx.fillStyle='#ffd700'; ctx.fill();
+    ctx.fillStyle='rgba(255,255,255,0.5)';
+    ctx.beginPath(); ctx.arc(c.x-3,yy-3,c.r*.4,0,Math.PI*2); ctx.fill();
+    ctx.restore();
+  });
+
+  // Power-up items
+  const pwEmoji=['🛡️','⚡','🧲'];
+  g.powerups.forEach(pw=>{
+    const t=Date.now()*.002;
+    const yy=pw.y+Math.sin(t)*8;
+    ctx.save();
+    ctx.shadowColor='#ffd700'; ctx.shadowBlur=20;
+    ctx.font='28px sans-serif'; ctx.textAlign='center';
+    ctx.fillText(pwEmoji[pw.type],pw.x,yy);
+    ctx.restore();
+  });
+
+  // Dynamic shadow under runner
+  {
+    const sx = r.x + r.w*0.5;
+    const shadowW = r.grounded ? r.w*0.55 : r.w*0.35;
+    const shadowH = r.grounded ? 7 : 4;
+    const shadowAlpha = r.grounded ? 0.38 : 0.18;
+    ctx.save();
+    ctx.globalAlpha = shadowAlpha;
+    const sg = ctx.createRadialGradient(sx,g.ground+2,0,sx,g.ground+2,shadowW);
+    sg.addColorStop(0,'rgba(0,0,0,0.7)');
+    sg.addColorStop(1,'rgba(0,0,0,0)');
+    ctx.fillStyle = sg;
+    ctx.beginPath(); ctx.ellipse(sx, g.ground+3, shadowW, shadowH, 0, 0, Math.PI*2); ctx.fill();
+    ctx.restore();
+  }
+
+  // Shield aura
+  if(g.shieldActive>0){
+    ctx.save();
+    ctx.globalAlpha=0.28+0.15*Math.sin(Date.now()*.012);
+    ctx.strokeStyle='#00f5ff'; ctx.lineWidth=3;
+    ctx.shadowColor='#00f5ff'; ctx.shadowBlur=24;
+    ctx.beginPath(); ctx.ellipse(r.x+r.w*0.5,r.y+r.h*0.45,r.w*.72,r.h*.58,0,0,Math.PI*2);
+    ctx.stroke();
+    ctx.globalAlpha=0.06+0.04*Math.sin(Date.now()*.012);
+    ctx.fillStyle='#00f5ff'; ctx.fill();
+    ctx.restore();
+  }
+
+  // ── REALISTIC 3D RUNNER ──
+  if(r.invincible<=0 || Math.floor(r.invincible/4)%2===0){
+
+    // Check if user image is valid
+    const runImg = loadImg(ASSETS.runners[currentProfile.runner]);
+    const hasImg = runImg.complete && runImg.naturalWidth > 10;
+
+    if(hasImg){
+      // Draw user image FLIPPED to face RIGHT direction
+      ctx.save();
+      const bobY = r.grounded ? Math.sin(r.frame*Math.PI/3)*2.5 : 0;
+      const cx2 = r.x + r.w/2;
+      const cy2 = r.y + r.h/2 + bobY;
+      // Flip horizontally so runner faces right (forward direction)
+      ctx.translate(cx2, cy2);
+      ctx.scale(-1, 1); // Mirror image to face right
+      ctx.translate(-cx2, -cy2);
+      // Slight lean forward while running
+      ctx.translate(cx2, r.y + r.h);
+      ctx.rotate(r.grounded ? -0.08 : (r.vy < 0 ? -0.15 : 0.05));
+      ctx.translate(-cx2, -(r.y + r.h));
+      ctx.drawImage(runImg, r.x, r.y + bobY, r.w, r.h);
+      ctx.restore();
+
+    } else {
+      // ── CANVAS-DRAWN 3D ANIMATED RUNNER ──
+      drawRealisticRunner(ctx, r, g, currentProfile.runner);
+    }
+  }
+
+  // Game particles
+  g.particles.forEach(p=>{
+    ctx.globalAlpha=p.alpha;
+    ctx.fillStyle=p.color;
+    if(p.type==='text'){
+      ctx.font=`bold ${p.size||18}px Orbitron,monospace`;
+      ctx.textAlign='center'; ctx.fillText(p.text,p.x,p.y);
+    } else {
+      ctx.beginPath(); ctx.arc(p.x,p.y,p.r||3,0,Math.PI*2); ctx.fill();
+    }
+  });
+  ctx.globalAlpha=1;
+
+  // Combo display
+  const cd=document.getElementById('comboDisplay');
+  if(g.combo>=2){ cd.textContent=`×${g.combo} COMBO`; cd.style.opacity='1'; }
+  else { cd.style.opacity='0'; }
+
+  // Power HUD
+  updatePowerHUD();
+}
+
+// ══════════════════════════════════════════════
+//  REALISTIC 3D CANVAS RUNNER
+// ══════════════════════════════════════════════
+function drawRealisticRunner(ctx, r, g, skinIdx){
+  const phase = (r.frame / 6) * Math.PI * 2;
+  const isJumping = !r.grounded;
+  const isRising  = r.vy < -2;
+
+  // Anchor: feet center-bottom
+  const fx = r.x + r.w * 0.5;
+  const fy = r.y + r.h;
+
+  // Palettes
+  const palettes = [
+    { skin:'#f4a261', cloth:'#e63946', shoe:'#1d3557', hair:'#3d2b1f', pant:'#457b9d' },
+    { skin:'#c9a87c', cloth:'#2d6a4f', shoe:'#1b1b2f', hair:'#1a1a1a', pant:'#1b263b' },
+    { skin:'#ffe0bd', cloth:'#7209b7', shoe:'#f72585', hair:'#4a0e0e', pant:'#3a0ca3' },
+    { skin:'#8d5524', cloth:'#fb8500', shoe:'#023047', hair:'#111',    pant:'#219ebc' },
+    { skin:'#ffd5c2', cloth:'#ef233c', shoe:'#2b2d42', hair:'#800000', pant:'#8d99ae' },
+  ];
+  const P = palettes[skinIdx % palettes.length];
+
+  function shadeColor(hex, amt){
+    const r2=Math.max(0,Math.min(255,parseInt(hex.slice(1,3),16)+amt));
+    const g2=Math.max(0,Math.min(255,parseInt(hex.slice(3,5),16)+amt));
+    const b2=Math.max(0,Math.min(255,parseInt(hex.slice(5,7),16)+amt));
+    return `rgb(${r2},${g2},${b2})`;
+  }
+
+  function limb(x1,y1,x2,y2,w1,w2,col){
+    const dx=x2-x1,dy=y2-y1;
+    const len=Math.sqrt(dx*dx+dy*dy)||1;
+    const nx=-dy/len,ny=dx/len;
+    const grd=ctx.createLinearGradient(x1+nx*w1,y1,x1-nx*w1,y1);
+    grd.addColorStop(0,shadeColor(col,35));
+    grd.addColorStop(0.4,col);
+    grd.addColorStop(1,shadeColor(col,-45));
+    ctx.beginPath();
+    ctx.moveTo(x1+nx*w1,y1+ny*w1);
+    ctx.lineTo(x2+nx*w2,y2+ny*w2);
+    ctx.lineTo(x2-nx*w2,y2-ny*w2);
+    ctx.lineTo(x1-nx*w1,y1-ny*w1);
+    ctx.closePath();
+    ctx.fillStyle=grd; ctx.fill();
+    ctx.strokeStyle=shadeColor(col,-55); ctx.lineWidth=0.7; ctx.stroke();
+  }
+
+  const H=r.h;
+  const headR  = H*0.13;
+  const torsoH = H*0.27;
+  const torsoW = H*0.115;
+  const thighL = H*0.22;
+  const shinL  = H*0.21;
+  const armUL  = H*0.16;
+  const armLL  = H*0.14;
+  const shoeL  = H*0.12;
+
+  const hipY   = -(thighL+shinL);
+  const waistY = hipY - torsoH*0.12;
+  const shouldY= hipY - torsoH;
+  const neckY  = shouldY - H*0.04;
+  const headCY = neckY  - headR*1.1;
+
+  const swing = isJumping ? 0.22 : 0.6;
+  const L1ang  = Math.sin(phase)*swing;
+  const L2ang  = Math.sin(phase+Math.PI)*swing;
+  const S1bend = isJumping ? (isRising?-0.5:-0.2) : Math.max(0,Math.sin(phase+0.9))*1.05;
+  const S2bend = isJumping ? (isRising?-0.9:-0.5) : Math.max(0,Math.sin(phase+Math.PI+0.9))*1.05;
+  const A1ang  = Math.sin(phase+Math.PI)*0.7;
+  const A2ang  = Math.sin(phase)*0.7;
+  const bodyLean = isJumping ? (isRising?-0.16:0.07) : -0.09;
+
+  ctx.save();
+  ctx.translate(fx, fy);
+  ctx.rotate(bodyLean);
+
+  // ── BACK LEG ──
+  ctx.save();
+  {
+    const tx=Math.sin(L2ang)*thighL; const ty=-Math.cos(L2ang)*thighL;
+    limb(0,hipY,tx,hipY+ty,torsoW*0.52,torsoW*0.44,P.pant);
+    const sa=L2ang+S2bend;
+    const sx2=tx+Math.sin(sa)*shinL; const sy2=Math.min(0,hipY+ty+Math.cos(sa)*shinL);
+    limb(tx,hipY+ty,sx2,sy2,torsoW*0.42,torsoW*0.3,P.pant);
+    // shoe back
+    ctx.save(); ctx.translate(sx2,sy2); ctx.rotate(sa*0.25);
+    const sg=ctx.createLinearGradient(0,0,shoeL*0.8,0);
+    sg.addColorStop(0,'#111'); sg.addColorStop(1,P.shoe);
+    ctx.fillStyle=sg; ctx.beginPath();
+    ctx.roundRect(-shoeL*.05,-H*.033,shoeL*.82,H*.05,H*.016); ctx.fill();
+    ctx.restore();
+  }
+  ctx.restore();
+
+  // ── BACK ARM ──
+  ctx.save();
+  {
+    const a=A2ang-0.25;
+    const ex=Math.sin(a)*armUL; const ey=shouldY+Math.cos(a)*armUL;
+    limb(0,shouldY,ex,ey,torsoW*0.44,torsoW*0.36,P.cloth);
+    const ex2=ex+Math.sin(a+0.4)*armLL; const ey2=ey+Math.cos(a+0.4)*armLL;
+    limb(ex,ey,ex2,ey2,torsoW*0.34,torsoW*0.24,P.skin);
+    ctx.beginPath(); ctx.arc(ex2,ey2,torsoW*0.21,0,Math.PI*2);
+    ctx.fillStyle=P.skin; ctx.fill();
+  }
+  ctx.restore();
+
+  // ── TORSO ──
+  {
+    const grd=ctx.createLinearGradient(-torsoW,shouldY,torsoW,hipY);
+    grd.addColorStop(0,shadeColor(P.cloth,40));
+    grd.addColorStop(0.5,P.cloth);
+    grd.addColorStop(1,shadeColor(P.cloth,-35));
+    ctx.fillStyle=grd;
+    ctx.beginPath();
+    ctx.moveTo(-torsoW*0.9,shouldY);
+    ctx.bezierCurveTo(-torsoW*1.15,shouldY+torsoH*0.35,-torsoW*0.9,waistY-H*.02,-torsoW*0.6,waistY);
+    ctx.lineTo(torsoW*0.6,waistY);
+    ctx.bezierCurveTo(torsoW*0.9,waistY-H*.02,torsoW*1.15,shouldY+torsoH*0.35,torsoW*0.9,shouldY);
+    ctx.closePath(); ctx.fill();
+    ctx.strokeStyle=shadeColor(P.cloth,-55); ctx.lineWidth=0.7; ctx.stroke();
+    // collar light
+    ctx.beginPath();
+    ctx.moveTo(-torsoW*0.45,shouldY+H*.015); ctx.lineTo(torsoW*0.45,shouldY+H*.015);
+    ctx.strokeStyle='rgba(255,255,255,0.22)'; ctx.lineWidth=1.3; ctx.stroke();
+  }
+
+  // ── FRONT LEG ──
+  ctx.save();
+  {
+    const tx=Math.sin(L1ang)*thighL; const ty=-Math.cos(L1ang)*thighL;
+    limb(0,hipY,tx,hipY+ty,torsoW*0.56,torsoW*0.47,P.pant);
+    const sa=L1ang+S1bend;
+    const sx2=tx+Math.sin(sa)*shinL; const sy2=Math.min(0,hipY+ty+Math.cos(sa)*shinL);
+    limb(tx,hipY+ty,sx2,sy2,torsoW*0.45,torsoW*0.32,P.pant);
+    // shoe front
+    ctx.save(); ctx.translate(sx2,sy2); ctx.rotate(sa*0.25);
+    const sg=ctx.createLinearGradient(0,0,shoeL*0.85,0);
+    sg.addColorStop(0,'#1a1a1a'); sg.addColorStop(0.6,P.shoe); sg.addColorStop(1,shadeColor(P.shoe,30));
+    ctx.fillStyle=sg; ctx.beginPath();
+    ctx.roundRect(-shoeL*.05,-H*.038,shoeL*.88,H*.055,H*.018); ctx.fill();
+    // white sole strip
+    ctx.fillStyle='rgba(255,255,255,0.4)';
+    ctx.beginPath(); ctx.roundRect(-shoeL*.02,-H*.014,shoeL*.76,H*.018,H*.007); ctx.fill();
+    ctx.restore();
+  }
+  ctx.restore();
+
+  // ── FRONT ARM ──
+  ctx.save();
+  {
+    const a=A1ang-0.18;
+    const ex=Math.sin(a)*armUL; const ey=shouldY+Math.cos(a)*armUL;
+    limb(0,shouldY,ex,ey,torsoW*0.46,torsoW*0.37,P.cloth);
+    const ex2=ex+Math.sin(a+0.35)*armLL; const ey2=ey+Math.cos(a+0.35)*armLL;
+    limb(ex,ey,ex2,ey2,torsoW*0.36,torsoW*0.25,P.skin);
+    ctx.beginPath(); ctx.arc(ex2,ey2,torsoW*0.22,0,Math.PI*2);
+    ctx.fillStyle=P.skin; ctx.fill();
+  }
+  ctx.restore();
+
+  // ── NECK ──
+  {
+    const ng=ctx.createLinearGradient(-torsoW*.17,neckY,torsoW*.17,shouldY);
+    ng.addColorStop(0,shadeColor(P.skin,20)); ng.addColorStop(1,shadeColor(P.skin,-20));
+    ctx.fillStyle=ng;
+    ctx.beginPath(); ctx.roundRect(-torsoW*.17,neckY,torsoW*.34,H*.055,torsoW*.1); ctx.fill();
+  }
+
+  // ── HEAD — 3D sphere ──
+  {
+    const hg=ctx.createRadialGradient(-headR*.28,headCY-headR*.25,headR*.08,0,headCY,headR);
+    hg.addColorStop(0,shadeColor(P.skin,55));
+    hg.addColorStop(0.5,P.skin);
+    hg.addColorStop(1,shadeColor(P.skin,-30));
+    ctx.fillStyle=hg;
+    ctx.beginPath(); ctx.arc(0,headCY,headR,0,Math.PI*2); ctx.fill();
+    ctx.strokeStyle=shadeColor(P.skin,-45); ctx.lineWidth=0.7; ctx.stroke();
+
+    // Hair
+    const hag=ctx.createRadialGradient(-headR*.15,headCY-headR*.7,0,0,headCY,headR);
+    hag.addColorStop(0,shadeColor(P.hair,50)); hag.addColorStop(1,P.hair);
+    ctx.fillStyle=hag;
+    ctx.beginPath();
+    ctx.arc(0,headCY,headR,Math.PI,Math.PI*2);
+    ctx.bezierCurveTo(headR,headCY,headR*.65,headCY+headR*.08,0,headCY-headR*.04);
+    ctx.bezierCurveTo(-headR*.65,headCY+headR*.08,-headR,headCY,-headR,headCY);
+    ctx.closePath(); ctx.fill();
+
+    // Ear (right side = forward direction)
+    ctx.fillStyle=shadeColor(P.skin,-8);
+    ctx.beginPath(); ctx.ellipse(headR*.92,headCY+headR*.08,headR*.13,headR*.19,0.15,0,Math.PI*2); ctx.fill();
+
+    // Eye (right side of face, runner faces right)
+    const eX=headR*.36, eY=headCY+headR*.09;
+    ctx.fillStyle='#fff';
+    ctx.beginPath(); ctx.ellipse(eX,eY,headR*.19,headR*.14,0,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='#1a1a2e';
+    ctx.beginPath(); ctx.arc(eX+headR*.04,eY,headR*.09,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='rgba(255,255,255,.85)';
+    ctx.beginPath(); ctx.arc(eX+headR*.06,eY-headR*.04,headR*.032,0,Math.PI*2); ctx.fill();
+
+    // Eyebrow (intense running expression)
+    ctx.strokeStyle=P.hair; ctx.lineWidth=1.5;
+    ctx.beginPath(); ctx.moveTo(eX-headR*.15,eY-headR*.22); ctx.lineTo(eX+headR*.14,eY-headR*.26); ctx.stroke();
+
+    // Mouth open (effort)
+    ctx.strokeStyle=shadeColor(P.skin,-55); ctx.lineWidth=1.1;
+    ctx.beginPath(); ctx.arc(eX*.55,headCY+headR*.38,headR*.11,0.1,Math.PI-.1); ctx.stroke();
+  }
+
+  // Speed lines on boost
+  if(g && g.boostActive>0){
+    ctx.save(); ctx.globalAlpha=0.55; ctx.strokeStyle='#00f5ff'; ctx.lineWidth=1.6;
+    [-H*.22,-H*.1,H*.02,H*.14].forEach(ly=>{
+      const ln=H*.15+Math.random()*H*.1;
+      ctx.beginPath(); ctx.moveTo(-torsoW*1.5,ly); ctx.lineTo(-torsoW*1.5-ln,ly); ctx.stroke();
+    });
+    ctx.restore();
+  }
+
+  ctx.restore();
+}
+
+function spawnParticlesBurst(x,y,type){
+  const g=G;
+  const colors = type==='coin'?['#ffd700','#fff','#ffaa00']:
+                 type==='shield'?['#00f5ff','#0088ff','#fff']:
+                 ['#ff3355','#ff6600','#ffaa00'];
+  for(let i=0;i<18;i++){
+    const angle=Math.random()*Math.PI*2, spd=2+Math.random()*4;
+    g.particles.push({
+      x, y, vx:Math.cos(angle)*spd, vy:Math.sin(angle)*spd-2,
+      gravity:0.12, r:2+Math.random()*3,
+      color:colors[Math.floor(Math.random()*colors.length)],
+      life:30+Math.random()*20, maxLife:50, alpha:1
+    });
+  }
+}
+
+function spawnFloatText(text,x,y,color='#fff'){
+  G.particles.push({
+    x, y, vx:0, vy:-1.5, gravity:0,
+    type:'text', text, color, size:20,
+    life:60, maxLife:60, alpha:1
+  });
+}
+function spawnSpecialParticle(x,y,text){
+  G.particles.push({
+    x, y, vx:0, vy:-1, gravity:0,
+    type:'text', text, color:'#ffd700', size:36,
+    life:100, maxLife:100, alpha:1
+  });
+}
+
+// ── GAME OVER ──
+function gameOver(){
+  const g=G;
+  gameRunning=false;
+  SFX.die();
+  const isNew = g.score > currentProfile.best;
+  if(isNew){ currentProfile.best=g.score; SFX.newRecord(); }
+  currentProfile.totalScore = (currentProfile.totalScore||0)+g.score;
+  currentProfile.gamesPlayed = (currentProfile.gamesPlayed||0)+1;
+  const pi = profiles.findIndex(p=>p.id===currentProfile.id);
+  if(pi!==-1) profiles[pi]=currentProfile;
+  saveProfiles();
+
+  document.getElementById('goTitle').textContent = isNew?'🏆 NEW RECORD!':'GAME OVER';
+  document.getElementById('goScore').textContent = g.score.toLocaleString();
+  document.getElementById('goStats').innerHTML =
+    `Coins: ${g.coins} &nbsp;|&nbsp; Level: ${g.level}<br>Best: ${currentProfile.best.toLocaleString()}`;
+  document.getElementById('gameOverPanel').classList.remove('hidden');
+}
+
+// ── HUD ──
+function updateHUD(){
+  document.getElementById('hudScore').textContent = G.score.toLocaleString();
+  document.getElementById('hudBest').textContent = currentProfile.best.toLocaleString();
+  document.getElementById('hudLevel').textContent = G.level;
+}
+function updateLivesHUD(){
+  const el=document.getElementById('livesDisplay');
+  el.innerHTML='';
+  for(let i=0;i<3;i++){
+    const h=document.createElement('span'); h.className='heart';
+    h.textContent = i<G.lives?'❤️':'🖤'; el.appendChild(h);
+  }
+}
+function updatePowerHUD(){
+  const g=G;
+  const pis=document.querySelectorAll('.power-icon');
+  [[g.shieldActive,g.shieldCD,300],[g.boostActive,g.boostCD,180],[g.magnetActive,g.magnetCD,300]]
+  .forEach(([active,cd,max],i)=>{
+    pis[i].classList.toggle('active',active>0);
+    const pcd=pis[i].querySelector('.power-cd');
+    if(active>0){ pcd.style.clipPath=`inset(${(1-active/max)*100}% 0 0 0)`; }
+    else pcd.style.clipPath='inset(100% 0 0 0)';
+  });
+}
+
+// ── CONTROLS ──
+function doJump(){
+  if(!gameRunning||paused) return;
+  const r=G.runner;
+  if(r.grounded){ r.vy=-16; r.grounded=false; r.jumping=true; SFX.jump(); }
+  else if(!r.doubleJump){ r.vy=-13; r.doubleJump=true; SFX.jump(); spawnParticlesBurst(r.x+r.w/2,r.y+r.h,'coin'); }
+}
+
+document.addEventListener('keydown',e=>{
+  if(e.code==='Space'||e.code==='ArrowUp'||e.code==='KeyW'){
+    e.preventDefault(); doJump();
+  }
+  if(e.code==='Escape'||e.code==='KeyP'){
+    if(gameRunning){ paused?resumeGame():pauseGame(); }
+  }
+});
+
+canvas.addEventListener('click', doJump);
+canvas.addEventListener('touchstart', e=>{e.preventDefault();doJump();},{passive:false});
+
+function pauseGame(){
+  paused=true;
+  document.getElementById('pauseScore').textContent = G.score.toLocaleString();
+  document.getElementById('pausePanel').classList.remove('hidden');
+}
+
+window.addEventListener('resize',()=>{
+  if(gameRunning){ canvas.width=innerWidth; canvas.height=innerHeight; }
+  pCanvas.width=innerWidth; pCanvas.height=innerHeight;
+});
+
+// Start on profile screen
+document.getElementById('profileScreen').classList.remove('hidden');
+startParticles();
+</script>
+</body>
+</html>
