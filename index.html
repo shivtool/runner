@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <title>Shadow Dash — Runner Game</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@400;600;700&display=swap');
@@ -26,6 +26,7 @@
     font-family: 'Rajdhani', sans-serif;
     color: var(--text);
     min-height: 100vh;
+    min-height: 100dvh;
     overflow: hidden;
     user-select: none;
   }
@@ -398,6 +399,88 @@
   ::-webkit-scrollbar { width:4px; }
   ::-webkit-scrollbar-track { background:transparent; }
   ::-webkit-scrollbar-thumb { background:var(--border); border-radius:2px; }
+
+  /* ── MOBILE FIXES ── */
+  @media (max-width: 480px) and (max-height: 900px) {
+
+    /* Profile screen — scroll karne dein agar content zyada ho */
+    #profileScreen { align-items: flex-start; overflow-y: auto; padding: 12px 0; }
+    .profile-box {
+      padding: 22px 20px;
+      width: 96vw;
+      margin: auto;
+    }
+    .profile-box h1 { font-size: 1.4rem; margin-bottom: 4px; }
+    .profile-box .sub { font-size: .8rem; margin-bottom: 18px; }
+    .form-group { margin-bottom: 14px; }
+    .form-group input, .form-group select { padding: 10px 12px; font-size:.95rem; }
+    .runner-thumb { width:46px; height:46px; }
+    .btn { padding: 12px; font-size: .85rem; }
+    .tab-btn { padding: 8px; font-size: .82rem; }
+
+    /* Menu screen */
+    #menuScreen { gap: 12px; padding: 16px; }
+    .menu-title { font-size: clamp(2rem, 12vw, 3rem); letter-spacing: 3px; }
+    .menu-sub { font-size: .85rem; }
+    .menu-btns { width: 92vw; gap: 9px; }
+    .menu-btns .btn { padding: 13px; font-size: .82rem; }
+    .profile-badge { padding: 10px 14px; }
+    .pb-avatar { font-size: 1.6rem; }
+    .pb-info .pb-name { font-size: .95rem; }
+
+    /* Pre-game screen */
+    #preGameScreen { align-items: flex-start; overflow-y: auto; padding: 10px 0; }
+    .pregame-box {
+      padding: 18px 14px;
+      width: 96vw;
+      max-height: none;
+      margin: auto;
+    }
+    .pregame-box h2 { font-size: 1.2rem; }
+    .pregame-sub { font-size: .78rem; margin-bottom: 14px; }
+    .pregame-stats { gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+    .stat-pill { padding: 6px 10px; }
+    .stat-pill .sp-val { font-size: .85rem; }
+    .stat-pill .sp-label { font-size: .58rem; }
+    .select-section { margin-bottom: 16px; }
+    .bg-grid { grid-template-columns: repeat(5,1fr); gap:6px; }
+    .bg-thumb { height: 50px; font-size: 1.1rem; }
+    .skin-grid { grid-template-columns: repeat(5,1fr); gap:6px; }
+    .skin-card { padding: 6px 2px; }
+    .skin-card .skin-icon { font-size: 1.4rem; }
+    .skin-card .skin-name { font-size: .55rem; }
+    .pregame-btns .btn { padding: 11px; font-size: .8rem; }
+
+    /* Overlay panels — scroll karne dein */
+    .panel-box {
+      padding: 22px 18px;
+      width: 92vw;
+      max-height: 88vh;
+      overflow-y: auto;
+    }
+    .panel-title { font-size: 1.5rem; }
+    .panel-score { font-size: 1.2rem; }
+    .panel-stats { font-size: .85rem; }
+    .panel-btns .btn { padding: 12px; font-size: .8rem; }
+
+    /* Shop */
+    #shopPanel .panel-box { width: 94vw; padding: 18px 14px; }
+    .upgrade-row { padding: 10px 12px; gap: 8px; }
+    .upgrade-icon { font-size: 1.3rem; width: 32px; }
+    .upgrade-name { font-size: .9rem; }
+    .upgrade-btn { padding: 7px 10px; font-size: .65rem; }
+
+    /* HUD in-game */
+    #hud { padding: 6px 12px; }
+    .hud-val { font-size: 1rem; }
+    .hud-label { font-size: .58rem; }
+    .heart { font-size: 1rem; }
+    #inGameBackBtn { top: 8px; right: 10px; padding: 5px 10px; font-size: .65rem; }
+
+    /* Power bar */
+    #powerBar { bottom: 14px; gap: 8px; }
+    .power-icon { width: 38px; height: 38px; font-size: 1rem; }
+  }
 </style>
 </head>
 <body>
