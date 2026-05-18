@@ -2,7 +2,10 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>Shadow Dash — Runner Game</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@400;600;700&display=swap');
@@ -21,16 +24,24 @@
 
   * { margin:0; padding:0; box-sizing:border-box; }
 
+  html { height: -webkit-fill-available; }
+
   body {
     background: var(--bg);
     font-family: 'Rajdhani', sans-serif;
     color: var(--text);
     min-height: 100vh;
+    min-height: calc(var(--vh, 1vh) * 100);
+    min-height: -webkit-fill-available;
     overflow: hidden;
     user-select: none;
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
   }
 
-  .screen { position:fixed; inset:0; display:flex; align-items:center; justify-content:center; z-index:100; }
+  .screen { position:fixed; top:0; left:0; right:0; bottom:0; top:env(safe-area-inset-top,0); bottom:env(safe-area-inset-bottom,0); display:flex; align-items:center; justify-content:center; z-index:100; }
   .screen.hidden { display:none; }
 
   #particles { position:fixed; inset:0; z-index:0; pointer-events:none; }
@@ -1915,6 +1926,16 @@ window.addEventListener('resize',()=>{
   if(gameRunning){ canvas.width=innerWidth; canvas.height=innerHeight; }
   pCanvas.width=innerWidth; pCanvas.height=innerHeight;
 });
+
+// Mobile full screen fix — scroll address bar away
+function fixMobileHeight() {
+  document.documentElement.style.setProperty('--vh', window.innerHeight * 0.01 + 'px');
+  // On first load, scroll to push browser chrome away
+  window.scrollTo(0, 1);
+}
+window.addEventListener('resize', fixMobileHeight);
+window.addEventListener('orientationchange', fixMobileHeight);
+fixMobileHeight();
 
 // Start on profile screen
 document.getElementById('profileScreen').classList.remove('hidden');
